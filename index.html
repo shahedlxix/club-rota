@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>Club Rota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Settings: the Google Sheet this page reads ===== */
+  :root{
+    --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef2f3; --border:#dfe5e7;
+    --text:#14202b; --muted:#64737f; --accent:#0f766e; --accent-soft:#d5f0ec;
+    --today:#fff6d6; --today-line:#f0b400; --weekend:#f7f9fa;
+    --early:#dbeafe; --early-t:#1e40af;
+    --late:#ede9fe;  --late-t:#5b21b6;
+    --in:#dcfce7;    --in-t:#166534;
+    --time:#e0f2fe;  --time-t:#075985;
+    --work:#fef3c7;  --work-t:#92400e;
+    --leave:#fce7f3; --leave-t:#9d174d;
+    --off:#f1f5f9;   --off-t:#64748b;
+    --sick:#fee2e2;  --sick-t:#b91c1c;
+    --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1417; --surface:#151f23; --surface-2:#1c282d; --border:#2a383e;
+      --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37;
+      --today:#3a3214; --today-line:#f0b400; --weekend:#121b1f;
+      --early:#1e2f4f; --early-t:#93c5fd; --late:#2e2650; --late-t:#c4b5fd;
+      --in:#173a26; --in-t:#86efac; --time:#123247; --time-t:#7dd3fc;
+      --work:#3b2f12; --work-t:#fcd34d; --leave:#45182f; --leave-t:#f9a8d4;
+      --off:#1e293b; --off-t:#94a3b8; --sick:#4a1a1a; --sick-t:#fca5a5;
+      --shadow:none;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1417; --surface:#151f23; --surface-2:#1c282d; --border:#2a383e;
+    --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37;
+    --today:#3a3214; --today-line:#f0b400; --weekend:#121b1f;
+    --early:#1e2f4f; --early-t:#93c5fd; --late:#2e2650; --late-t:#c4b5fd;
+    --in:#173a26; --in-t:#86efac; --time:#123247; --time-t:#7dd3fc;
+    --work:#3b2f12; --work-t:#fcd34d; --leave:#45182f; --leave-t:#f9a8d4;
+    --off:#1e293b; --off-t:#94a3b8; --sick:#4a1a1a; --sick-t:#fca5a5;
+    --shadow:none;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+  header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+  .bar{display:flex;align-items:center;gap:12px;height:56px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:14px}
+  .spacer{flex:1}
+  .status{font-size:12px;color:var(--muted);white-space:nowrap}
+  .icon-btn{border:1px solid var(--border);background:var(--surface);border-radius:10px;height:36px;min-width:36px;padding:0 10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .icon-btn:hover{background:var(--surface-2)}
+  .spin{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  nav.tabs{display:flex;gap:4px}
+  nav.tabs button{border:0;background:none;padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;color:var(--muted);font-weight:600}
+  nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+  main{padding:20px 0 60px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+  .muted{color:var(--muted)}
+  h2{font-size:20px;margin:0 0 4px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  select,input[type=search]{height:40px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:0 12px;min-width:0}
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* chips */
+  .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--work);color:var(--work-t)}
+  .k-early{background:var(--early);color:var(--early-t)}
+  .k-late{background:var(--late);color:var(--late-t)}
+  .k-in{background:var(--in);color:var(--in-t)}
+  .k-time{background:var(--time);color:var(--time-t)}
+  .k-work{background:var(--work);color:var(--work-t)}
+  .k-leave{background:var(--leave);color:var(--leave-t)}
+  .k-off{background:var(--off);color:var(--off-t)}
+  .k-sick{background:var(--sick);color:var(--sick-t)}
+
+  /* ===== My shifts ===== */
+  .me-head{padding:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .me-head select{flex:1;min-width:200px;max-width:340px}
+  .hero{margin-top:16px;padding:20px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;background:linear-gradient(135deg,var(--accent),#115e59);color:#fff;border:0}
+  .hero .date-tile{background:rgba(255,255,255,.15);border-radius:12px;width:72px;text-align:center;padding:8px 0}
+  .hero .date-tile .d{font-size:28px;font-weight:700;line-height:1}
+  .hero .date-tile .m{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.9}
+  .hero .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
+  .hero .when{font-size:20px;font-weight:700}
+  .hero .what{font-size:15px;opacity:.95;margin-top:2px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .stat{padding:12px 14px}
+  .stat .n{font-size:22px;font-weight:700}
+  .stat .t{font-size:12px;color:var(--muted)}
+  .list-tools{display:flex;justify-content:space-between;align-items:center;margin:22px 0 8px;gap:10px;flex-wrap:wrap}
+  .week{margin-bottom:14px;overflow:hidden}
+  .week-h{padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  .day{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+  .day:last-child{border-bottom:0}
+  .day .dn{text-align:center;line-height:1.1}
+  .day .dn b{display:block;font-size:20px}
+  .day .dn span{font-size:11px;color:var(--muted);text-transform:uppercase}
+  .day.is-today{background:var(--today);box-shadow:inset 3px 0 0 var(--today-line)}
+  .day.rest{opacity:.65}
+  .day .note{font-size:12px;color:var(--muted);margin-top:2px}
+  .rel{font-size:12px;color:var(--muted);white-space:nowrap}
+
+  /* ===== Full rota ===== */
+  .rota-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .months{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .months button{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap;font-weight:500}
+  .months button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .months button.cur:not([aria-pressed="true"]){border-color:var(--accent);color:var(--accent)}
+  .table-wrap{overflow:auto;max-height:calc(100vh - 230px);border-radius:14px}
+  table.rota{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+  .rota th,.rota td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:6px 6px;text-align:center;white-space:nowrap;background:var(--surface)}
+  .rota thead th{position:sticky;top:0;z-index:3;background:var(--surface-2);font-weight:600;font-size:12px;min-width:66px}
+  .rota thead th .dw{display:block;color:var(--muted);font-weight:500;font-size:11px}
+  .rota thead th .dd{display:block;font-size:15px}
+  .rota .name{position:sticky;left:0;z-index:2;text-align:left;font-weight:600;min-width:130px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+  .rota thead th.name{z-index:4}
+  .rota .name button{all:unset;cursor:pointer}
+  .rota .name button:hover{color:var(--accent);text-decoration:underline}
+  .rota .name small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .rota tr.team td{background:var(--accent-soft);color:var(--accent);font-weight:700;text-align:left;text-transform:uppercase;font-size:12px;letter-spacing:.06em}
+  .rota tr.team td.name{background:var(--accent-soft)}
+  .rota tr.notes td{background:var(--surface);font-size:11px;color:var(--muted);white-space:normal;min-width:66px}
+  .rota tr.notes td.name{font-weight:500;font-style:italic}
+  .rota .we{background:var(--weekend)}
+  .rota .tcol{background:var(--today)!important;box-shadow:inset 0 0 0 1px var(--today-line)}
+  .rota thead th.tcol{color:var(--text)}
+  .rota .other-m{opacity:.55}
+  .rota tbody tr.staff:hover td{filter:brightness(.97)}
+  .rota tr.hl td{background:var(--accent-soft)}
+
+  /* ===== Day view ===== */
+  .day-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .day-nav h2{margin:0;min-width:220px}
+  .teams{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .team-card h3{margin:0;padding:12px 16px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);border-bottom:1px solid var(--border)}
+  .team-card ul{list-style:none;margin:0;padding:6px 0}
+  .team-card li{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;gap:8px}
+  .team-card li.away{opacity:.6}
+  .team-card .tnote{padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px dashed var(--border)}
+
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted);align-items:center}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+  .error{padding:14px 16px;border-color:var(--sick-t);color:var(--sick-t);margin-bottom:16px}
+  .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+  .hidden{display:none!important}
+
+  @media (max-width:640px){
+    .status{display:none}
+    nav.tabs{overflow-x:auto}
+    nav.tabs button{padding:10px 10px}
+    .day-nav h2{flex-basis:100%;order:-1;font-size:18px}
+    .hero{grid-template-columns:1fr;text-align:left}
+    .stats{grid-template-columns:repeat(3,1fr)}
+    .stat{padding:10px}
+    .stat .n{font-size:18px}
+    .table-wrap{max-height:calc(100vh - 260px)}
+    .rota .name{min-width:96px;max-width:110px}
+    .rota thead th{min-width:54px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <div class="brand"><div class="logo">R</div>Club Rota</div>
+    <div class="spacer"></div>
+    <span class="status" id="status">Loading…</span>
+    <button class="icon-btn" id="refresh" title="Refresh from Google Sheets" aria-label="Refresh">
+      <svg id="refreshIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button class="icon-btn" id="theme" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
+  </div>
+  <div class="wrap">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="me" aria-selected="true">My shifts</button>
+      <button role="tab" data-view="day" aria-selected="false">Who's in</button>
+      <button role="tab" data-view="rota" aria-selected="false">Full rota</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="error" class="card error hidden"></div>
+
+  <!-- My shifts -->
+  <section id="view-me">
+    <div class="card me-head">
+      <div style="flex:1;min-width:200px">
+        <h2 id="meTitle">My shifts</h2>
+        <div class="muted" id="meSub">Choose your name to see your upcoming shifts.</div>
+      </div>
+      <select id="staffSelect" aria-label="Choose staff member"><option value="">Select your name…</option></select>
+      <button class="icon-btn" id="copyLink" title="Copy a personal link you can bookmark">🔗 My link</button>
+    </div>
+    <div id="meBody"></div>
+  </section>
+
+  <!-- Who's in -->
+  <section id="view-day" class="hidden">
+    <div class="day-nav">
+      <button class="icon-btn" id="dayPrev" aria-label="Previous day">‹</button>
+      <h2 id="dayTitle"></h2>
+      <button class="icon-btn" id="dayNext" aria-label="Next day">›</button>
+      <button class="icon-btn" id="dayToday">Today</button>
+      <input type="date" id="dayPick" aria-label="Pick a date" style="height:36px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:0 8px">
+    </div>
+    <div id="dayBody"></div>
+  </section>
+
+  <!-- Full rota -->
+  <section id="view-rota" class="hidden">
+    <div class="rota-tools">
+      <div class="months" id="months"></div>
+    </div>
+    <div class="rota-tools">
+      <select id="teamFilter" aria-label="Filter by team"><option value="">All teams</option></select>
+      <input type="search" id="nameFilter" placeholder="Search name…" aria-label="Search name">
+      <button class="icon-btn" id="jumpToday">Jump to today</button>
+    </div>
+    <div class="card table-wrap" id="tableWrap"></div>
+  </section>
+
+  <div class="legend" id="legend">
+    <span>Key:</span>
+    <span class="chip k-early">E · Early</span>
+    <span class="chip k-late">L · Late</span>
+    <span class="chip k-in">IN</span>
+    <span class="chip k-time">Set hours</span>
+    <span class="chip k-work">Other duty</span>
+    <span class="chip k-leave">AL · Leave</span>
+    <span class="chip k-off">OFF / RDO</span>
+    <span class="chip k-sick">Sick</span>
+  </div>
+</main>
+
+<script>
+/* ===== Settings ===== */
+const SHEET_ID = '1szrWi6SmP8fpx9jE8WyPK_z0gASPDWjr';
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const AUTO_REFRESH_MIN = 5;
+const UPCOMING_DAYS = 42;
+
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch {} }
+};
+const dkey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fromKey = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); };
+const today0 = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); };
+const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ','){ row.push(f); f = ''; }
+    else if (c === '\n'){ row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+const clean = s => (s || '').replace(/\s+/g, ' ').trim();
+
+/* ---------- Shift classification ---------- */
+function kind(v){
+  const t = clean(v).toUpperCase();
+  if (!t) return null;
+  if (/^(AL|A\/L|HOLIDAY|HOL)\b/.test(t)) return 'leave';
+  if (/^(OFF|RDO|DAY OFF)\b/.test(t)) return 'off';
+  if (/SICK/.test(t)) return 'sick';
+  if (/^E\b/.test(t)) return 'early';
+  if (/^L\b/.test(t)) return 'late';
+  if (/^IN\b/.test(t)) return 'in';
+  if (/^\d/.test(t)) return 'time';
+  return 'work';
+}
+const isWork = k => k && !['leave','off','sick'].includes(k);
+const chip = v => { const k = kind(v); return k ? `<span class="chip k-${k}">${esc(clean(v))}</span>` : ''; };
+const describe = v => {
+  const k = kind(v), t = clean(v);
+  const extra = t.replace(/^(E|L|IN)\b\s*/i, '').replace(/^\//, '');
+  const base = {early:'Early shift', late:'Late shift', in:'In', time:t, leave:'Annual leave', off:'Day off', sick:'Sick'}[k] || t;
+  if ((k === 'early' || k === 'late' || k === 'in') && extra) return `${base} · ${extra}`;
+  return base;
+};
+
+/* ---------- Sheet parsing ---------- */
+const DOW_MAP = {sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6};
+function guessYear(mIdx, dowLabel){
+  const want = DOW_MAP[clean(dowLabel).slice(0,3).toLowerCase()];
+  const cy = new Date().getFullYear();
+  if (want === undefined) return cy;
+  for (const y of [cy, cy-1, cy+1]) if (new Date(y, mIdx, 1).getDay() === want) return y;
+  return cy;
+}
+
+function parseMonth(name, mIdx, rows){
+  const dowRow = rows[0] || [], dayRow = rows[1] || [];
+  const year = guessYear(mIdx, dowRow[2]);
+  // map columns -> dates; a drop in day number means we've spilled into next month
+  const cols = []; let monthOff = 0, last = 0;
+  for (let c = 2; c < dayRow.length; c++){
+    const n = parseInt(clean(dayRow[c]), 10);
+    if (!n) continue;
+    if (n < last) monthOff++;
+    last = n;
+    cols.push({c, date: new Date(year, mIdx + monthOff, n), spill: monthOff > 0});
+  }
+  const teams = []; let team = null;
+  for (let r = 2; r < rows.length; r++){
+    const row = rows[r], nm = clean(row[0]), hrs = clean(row[1]);
+    const cells = cols.map(col => clean(row[col.c]));
+    // section headings are rows like "Clean Team" / "Lifeguards" with no contract hours
+    if (nm && !hrs && /(team|lifeguards|staff)$/i.test(nm)){
+      team = {name: nm, notes: cells.map(v => v ? [v] : []), staff: []};
+      teams.push(team);
+    } else if (!nm){
+      if (team) cells.forEach((v,i) => v && team.notes[i].push(v));
+    } else {
+      if (!team){ team = {name:'Staff', notes: cells.map(() => []), staff: []}; teams.push(team); }
+      team.staff.push({name: nm, hours: hrs, cells});
+    }
+  }
+  return {name, mIdx, year, cols, teams};
+}
+
+/* ---------- Data loading ---------- */
+let data = { months: [] };   // parsed months, sorted
+let byDate = new Map();      // dateKey -> [{team, name, value}]
+let teamNotes = new Map();   // dateKey -> [{team, note}]
+let staffList = [];          // [{name, teams:[...], hours}]
+
+async function fetchMonth(name){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+  const res = await fetch(url, {cache:'no-store'});
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const rows = parseCSV(await res.text());
+  // Google silently returns the first tab if a name doesn't exist — check it's really this month
+  if (clean(rows[1] && rows[1][0]).toLowerCase() !== name.toLowerCase()) return null;
+  return parseMonth(name, MONTHS.indexOf(name), rows);
+}
+
+function index(){
+  byDate = new Map(); teamNotes = new Map();
+  const staff = new Map();
+  for (const m of data.months){
+    m.cols.forEach((col, i) => {
+      if (col.spill) return; // that day belongs to the next tab
+      const k = dkey(col.date);
+      for (const t of m.teams){
+        t.notes[i].forEach(n => { if (!teamNotes.has(k)) teamNotes.set(k, []); teamNotes.get(k).push({team: t.name, note: n}); });
+        for (const s of t.staff){
+          const v = s.cells[i];
+          if (!byDate.has(k)) byDate.set(k, []);
+          byDate.get(k).push({team: t.name, name: s.name, value: v});
+        }
+      }
+    });
+    for (const t of m.teams) for (const s of t.staff){
+      const e = staff.get(s.name) || {name: s.name, teams: new Set(), hours: s.hours};
+      e.teams.add(t.name); e.hours = s.hours || e.hours;
+      staff.set(s.name, e);
+    }
+  }
+  staffList = [...staff.values()].map(s => ({...s, teams: [...s.teams]})).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+let loading = false;
+async function load(){
+  if (loading) return; loading = true;
+  $('#refreshIcon').classList.add('spin');
+  $('#status').textContent = 'Updating…';
+  try {
+    const results = await Promise.allSettled(MONTHS.map(fetchMonth));
+    const months = results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
+    if (!months.length){
+      const failed = results.find(r => r.status === 'rejected');
+      throw new Error(failed ? failed.reason.message : 'No month tabs found');
+    }
+    months.sort((a,b) => a.year - b.year || a.mIdx - b.mIdx);
+    data.months = months;
+    index();
+    $('#error').classList.add('hidden');
+    $('#status').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    renderAll();
+  } catch (e){
+    const box = $('#error');
+    box.innerHTML = `Couldn't load the rota from Google Sheets (${esc(e.message)}). Check your connection and that the sheet is shared as “Anyone with the link can view”.`;
+    box.classList.remove('hidden');
+    $('#status').textContent = 'Offline';
+  } finally {
+    loading = false;
+    $('#refreshIcon').classList.remove('spin');
+  }
+}
+
+/* ---------- Views ---------- */
+let view = 'me';
+let rotaMonth = null;   // index into data.months
+let dayDate = today0();
+
+function setView(v){
+  view = v;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.view === v));
+  ['me','day','rota'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
+  store.set('rota.view', v);
+  renderAll();
+  if (v === 'rota') scrollToToday();
+}
+
+function renderAll(){
+  if (!data.months.length) return;
+  renderStaffSelect();
+  if (view === 'me') renderMe();
+  if (view === 'day') renderDay();
+  if (view === 'rota') renderRota();
+}
+
+/* ----- My shifts ----- */
+function currentMe(){ return store.get('rota.me') || ''; }
+
+function renderStaffSelect(){
+  const sel = $('#staffSelect'), me = currentMe();
+  const groups = new Map();
+  for (const s of staffList){ const g = s.teams[0]; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(s); }
+  let html = '<option value="">Select your name…</option>';
+  for (const [g, list] of groups) html += `<optgroup label="${esc(g)}">` + list.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('') + '</optgroup>';
+  if (sel.dataset.sig !== html){ sel.innerHTML = html; sel.dataset.sig = html; }
+  sel.value = me;
+}
+
+function relLabel(d){
+  const diff = Math.round((d - today0()) / 864e5);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff < 7) return `In ${diff} days`;
+  return `In ${Math.round(diff/7)} wk${diff >= 14 ? 's' : ''}`;
+}
+
+function shiftsFor(name, from, days){
+  const out = [];
+  for (let i = 0; i < days; i++){
+    const d = addDays(from, i), k = dkey(d);
+    const entries = (byDate.get(k) || []).filter(e => e.name === name);
+    if (!byDate.has(k)) { out.push({d, values: [], missing: true}); continue; }
+    const values = [...new Set(entries.map(e => e.value).filter(Boolean))];
+    out.push({d, values, notes: (teamNotes.get(k) || []).filter(n => entries.some(e => e.team === n.team)).map(n => n.note)});
+  }
+  return out;
+}
+
+function renderMe(){
+  const me = currentMe(), body = $('#meBody');
+  const s = staffList.find(x => x.name === me);
+  if (!s){
+    $('#meTitle').textContent = 'My shifts';
+    $('#meSub').textContent = 'Choose your name to see your upcoming shifts. Your choice is remembered on this device.';
+    body.innerHTML = `<div class="card empty" style="margin-top:16px">👋 Pick your name above to get started.</div>`;
+    return;
+  }
+  $('#meTitle').textContent = `Hi ${s.name}`;
+  $('#meSub').textContent = `${s.teams.join(' · ')}${s.hours && s.hours !== '0' ? ` · ${s.hours} hrs/week contract` : ''}`;
+
+  const t0 = today0();
+  const days = shiftsFor(s.name, t0, UPCOMING_DAYS);
+  const working = days.filter(x => x.values.some(v => isWork(kind(v))));
+  const next = working[0];
+  const in7 = days.slice(0, 7).filter(x => x.values.some(v => isWork(kind(v)))).length;
+  const leave = days.filter(x => x.values.some(v => kind(v) === 'leave')).length;
+  const showRest = store.get('rota.showRest') === '1';
+
+  let html = '';
+  if (next){
+    const v = next.values.find(v => isWork(kind(v)));
+    html += `<div class="card hero">
+      <div class="date-tile"><div class="m">${DOW[next.d.getDay()]}</div><div class="d">${next.d.getDate()}</div><div class="m">${MONTHS[next.d.getMonth()].slice(0,3)}</div></div>
+      <div><div class="lbl">Next shift · ${relLabel(next.d)}</div>
+      <div class="when">${next.d.toLocaleDateString(undefined, {weekday:'long', day:'numeric', month:'long'})}</div>
+      <div class="what">${esc(next.values.filter(v => isWork(kind(v))).map(describe).join(' + '))}</div></div></div>`;
+  } else {
+    html += `<div class="card empty" style="margin-top:16px">No shifts on the rota in the next ${UPCOMING_DAYS} days.</div>`;
+  }
+  html += `<div class="stats">
+    <div class="card stat"><div class="n">${in7}</div><div class="t">shifts next 7 days</div></div>
+    <div class="card stat"><div class="n">${working.length}</div><div class="t">shifts next 6 weeks</div></div>
+    <div class="card stat"><div class="n">${leave}</div><div class="t">leave days ahead</div></div></div>`;
+
+  html += `<div class="list-tools"><b>Upcoming</b>
+    <label class="switch"><input type="checkbox" id="showRest" ${showRest ? 'checked' : ''}> Show days off</label></div>`;
+
+  // group by week (Mon start)
+  const weeks = new Map();
+  for (const x of days){
+    if (x.missing) continue;
+    const hasAny = x.values.length > 0;
+    const work = x.values.some(v => isWork(kind(v)));
+    if (!work && !showRest && !(hasAny && kind(x.values[0]) !== 'off')) continue;
+    const mon = addDays(x.d, -((x.d.getDay() + 6) % 7));
+    const k = dkey(mon);
+    if (!weeks.has(k)) weeks.set(k, []);
+    weeks.get(k).push(x);
+  }
+  if (!weeks.size) html += `<div class="card empty">Nothing to show.</div>`;
+  for (const [k, list] of weeks){
+    const mon = fromKey(k), sun = addDays(mon, 6);
+    const isThis = dkey(addDays(t0, -((t0.getDay() + 6) % 7))) === k;
+    const fmt = d => d.toLocaleDateString(undefined, {day:'numeric', month:'short'});
+    html += `<div class="card week"><div class="week-h">${isThis ? 'This week · ' : ''}${fmt(mon)} – ${fmt(sun)}</div>`;
+    for (const x of list){
+      const work = x.values.some(v => isWork(kind(v)));
+      const isT = dkey(x.d) === dkey(t0);
+      html += `<div class="day ${isT ? 'is-today' : ''} ${work ? '' : 'rest'}">
+        <div class="dn"><span>${DOW[x.d.getDay()]}</span><b>${x.d.getDate()}</b></div>
+        <div>${x.values.length ? x.values.map(chip).join(' ') + `<div class="note">${esc(x.values.map(describe).join(' + '))}</div>` : '<span class="muted">Not rostered</span>'}
+          ${x.notes && x.notes.length ? `<div class="note">📌 ${esc(x.notes.join(' · '))}</div>` : ''}</div>
+        <div class="rel">${relLabel(x.d)}</div></div>`;
+    }
+    html += `</div>`;
+  }
+  const lastLoaded = data.months[data.months.length - 1];
+  if (days.some(x => x.missing)) html += `<p class="muted" style="font-size:13px">The rota currently runs to the end of ${lastLoaded.name}.</p>`;
+  body.innerHTML = html;
+  $('#showRest').onchange = e => { store.set('rota.showRest', e.target.checked ? '1' : '0'); renderMe(); };
+}
+
+/* ----- Who's in ----- */
+function renderDay(){
+  const k = dkey(dayDate), isT = k === dkey(today0());
+  $('#dayTitle').textContent = (isT ? 'Today · ' : '') + dayDate.toLocaleDateString(undefined, {weekday:'long', day:'numeric', month:'long'});
+  $('#dayPick').value = k;
+  const entries = byDate.get(k);
+  if (!entries){ $('#dayBody').innerHTML = `<div class="card empty">No rota for this date yet.</div>`; return; }
+  const teams = new Map();
+  for (const e of entries){ if (!teams.has(e.team)) teams.set(e.team, []); teams.get(e.team).push(e); }
+  const notes = teamNotes.get(k) || [];
+  let html = '<div class="teams">', total = 0;
+  for (const [t, list] of teams){
+    const work = list.filter(e => isWork(kind(e.value)));
+    const away = list.filter(e => e.value && !isWork(kind(e.value)));
+    const tn = notes.filter(n => n.team === t);
+    if (!work.length && !away.length && !tn.length) continue;
+    total += work.length;
+    // order: early, in/time/other, late
+    const order = {early:0, time:1, in:2, work:3, late:4};
+    work.sort((a,b) => order[kind(a.value)] - order[kind(b.value)]);
+    html += `<div class="card team-card"><h3>${esc(t)} <span class="muted" style="font-weight:500">· ${work.length} in</span></h3>
+      ${tn.map(n => `<div class="tnote">📌 ${esc(n.note)}</div>`).join('')}
+      <ul>${work.map(e => `<li><span>${esc(e.name)}</span>${chip(e.value)}</li>`).join('')}
+      ${away.map(e => `<li class="away"><span>${esc(e.name)}</span>${chip(e.value)}</li>`).join('')}</ul></div>`;
+  }
+  html += '</div>';
+  $('#dayBody').innerHTML = total || notes.length ? html : `<div class="card empty">Nobody is rostered on this day.</div>`;
+}
+
+/* ----- Full rota ----- */
+function renderMonths(){
+  const cur = today0();
+  $('#months').innerHTML = data.months.map((m, i) =>
+    `<button data-i="${i}" aria-pressed="${i === rotaMonth}" class="${m.mIdx === cur.getMonth() && m.year === cur.getFullYear() ? 'cur' : ''}">${esc(m.name)}</button>`).join('');
+}
+
+function renderRota(){
+  if (rotaMonth === null || rotaMonth >= data.months.length){
+    const t = today0();
+    const i = data.months.findIndex(m => m.mIdx === t.getMonth() && m.year === t.getFullYear());
+    rotaMonth = i >= 0 ? i : data.months.length - 1;
+  }
+  renderMonths();
+  const m = data.months[rotaMonth];
+  const tf = $('#teamFilter');
+  const tOpts = '<option value="">All teams</option>' + m.teams.filter(t => t.staff.length).map(t => `<option>${esc(t.name)}</option>`).join('');
+  if (tf.dataset.sig !== tOpts){ const keep = tf.value; tf.innerHTML = tOpts; tf.dataset.sig = tOpts; tf.value = keep; }
+  const teamQ = tf.value, nameQ = clean($('#nameFilter').value).toLowerCase();
+  const me = currentMe(), tk = dkey(today0());
+
+  const colCls = col => [col.date.getDay() % 6 === 0 ? 'we' : '', dkey(col.date) === tk ? 'tcol' : '', col.spill ? 'other-m' : ''].join(' ');
+  let h = `<table class="rota"><thead><tr><th class="name">${esc(m.name)} ${m.year}</th>`;
+  h += m.cols.map(col => `<th class="${colCls(col)}" ${dkey(col.date) === tk ? 'id="todayCol"' : ''}><span class="dw">${DOW[col.date.getDay()]}</span><span class="dd">${col.date.getDate()}</span></th>`).join('');
+  h += `</tr></thead><tbody>`;
+  for (const t of m.teams){
+    if (teamQ && t.name !== teamQ) continue;
+    const staff = t.staff.filter(s => !nameQ || s.name.toLowerCase().includes(nameQ));
+    if (nameQ && !staff.length) continue;
+    if (!t.staff.length && !t.notes.some(n => n.length)) continue;
+    h += `<tr class="team"><td class="name">${esc(t.name)}</td><td colspan="${m.cols.length}"></td></tr>`;
+    if (!nameQ && t.notes.some(n => n.length)){
+      h += `<tr class="notes"><td class="name">Notes</td>` + t.notes.map((n, i) => `<td class="${colCls(m.cols[i])}">${esc(n.join(' · '))}</td>`).join('') + `</tr>`;
+    }
+    for (const s of staff){
+      h += `<tr class="staff ${s.name === me ? 'hl' : ''}"><td class="name"><button data-staff="${esc(s.name)}" title="See ${esc(s.name)}'s shifts">${esc(s.name)}</button>${s.hours && s.hours !== '0' ? `<small>${esc(s.hours)} hrs</small>` : ''}</td>`;
+      h += s.cells.map((v, i) => `<td class="${colCls(m.cols[i])}">${chip(v)}</td>`).join('') + `</tr>`;
+    }
+  }
+  h += `</tbody></table>`;
+  $('#tableWrap').innerHTML = h;
+  $('#jumpToday').classList.toggle('hidden', !document.getElementById('todayCol'));
+}
+
+function scrollToToday(){
+  const c = document.getElementById('todayCol'), w = $('#tableWrap');
+  if (c && w) w.scrollLeft = Math.max(0, c.offsetLeft - 140 - 66 * 2);
+}
+
+/* ---------- Events ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => setView(b.dataset.view));
+$('#refresh').onclick = load;
+$('#staffSelect').onchange = e => { store.set('rota.me', e.target.value); renderMe(); };
+$('#copyLink').onclick = async () => {
+  const me = currentMe();
+  if (!me){ $('#staffSelect').focus(); return; }
+  const url = location.origin + location.pathname + '?me=' + encodeURIComponent(me);
+  try { await navigator.clipboard.writeText(url); $('#copyLink').textContent = '✓ Copied'; }
+  catch { prompt('Your personal link:', url); }
+  setTimeout(() => $('#copyLink').textContent = '🔗 My link', 1800);
+};
+$('#months').onclick = e => { const b = e.target.closest('button'); if (!b) return; rotaMonth = +b.dataset.i; renderRota(); scrollToToday(); };
+$('#teamFilter').onchange = renderRota;
+$('#nameFilter').oninput = renderRota;
+$('#jumpToday').onclick = scrollToToday;
+$('#tableWrap').onclick = e => { const b = e.target.closest('[data-staff]'); if (!b) return; store.set('rota.me', b.dataset.staff); setView('me'); window.scrollTo(0,0); };
+$('#dayPrev').onclick = () => { dayDate = addDays(dayDate, -1); renderDay(); };
+$('#dayNext').onclick = () => { dayDate = addDays(dayDate, 1); renderDay(); };
+$('#dayToday').onclick = () => { dayDate = today0(); renderDay(); };
+$('#dayPick').onchange = e => { if (e.target.value){ dayDate = fromKey(e.target.value); renderDay(); } };
+$('#theme').onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  store.set('rota.theme', document.documentElement.dataset.theme);
+};
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+
+/* ---------- Start ---------- */
+(function init(){
+  const th = store.get('rota.theme'); if (th) document.documentElement.dataset.theme = th;
+  const p = new URLSearchParams(location.search).get('me');
+  if (p) store.set('rota.me', p);
+  const v = store.get('rota.view');
+  setView(p ? 'me' : (['me','day','rota'].includes(v) ? v : 'me'));
+  load();
+  setInterval(load, AUTO_REFRESH_MIN * 60 * 1000);
+})();
+</script>
+</body>
+</html>
