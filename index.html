@@ -251,6 +251,17 @@ const SHEET_ID = '1szrWi6SmP8fpx9jE8WyPK_z0gASPDWjr';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const AUTO_REFRESH_MIN = 5;
 const UPCOMING_DAYS = 42;
+// The sheet doesn't always separate these teams, so these people are always placed here
+const FIXED_TEAMS = {
+  'Clean Team': ['Diego','Diana','Saadat','Paula','Adetola','Isaac','Mohamed'],
+  'Lifeguards': ['Shahed','Zaid','Noah','Andrew','Ibriham','Zijian','Dylan','Emily','Alfie','Ryan','Jessica'],
+};
+const TEAM_OF = new Map(Object.entries(FIXED_TEAMS).flatMap(([t, names]) => names.map(n => [n.toLowerCase(), t])));
+// In "Who's in", a shift mentioning DM or Rec counts towards that team for the day
+const DUTY_TEAMS = [
+  {test: /\bDM\b/i, team: 'Management Team'},
+  {test: /\bREC(EPTION)?\b/i, team: 'Reception Team'},
+];
 
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const $ = s => document.querySelector(s);
@@ -339,7 +350,13 @@ function parseMonth(name, mIdx, rows){
       if (team) cells.forEach((v,i) => v && team.notes[i].push(v));
     } else {
       if (!team){ team = {name:'Staff', notes: cells.map(() => []), staff: []}; teams.push(team); }
-      team.staff.push({name: nm, hours: hrs, cells});
+      const fixed = TEAM_OF.get(nm.toLowerCase());
+      let home = team;
+      if (fixed && fixed.toLowerCase() !== team.name.toLowerCase()){
+        home = teams.find(t => t.name.toLowerCase() === fixed.toLowerCase());
+        if (!home){ home = {name: fixed, notes: cells.map(() => []), staff: []}; teams.push(home); }
+      }
+      home.staff.push({name: nm, hours: hrs, cells});
     }
   }
   return {name, mIdx, year, cols, teams};
@@ -551,8 +568,17 @@ function renderDay(){
   $('#dayPick').value = k;
   const entries = byDate.get(k);
   if (!entries){ $('#dayBody').innerHTML = `<div class="card empty">No rota for this date yet.</div>`; return; }
-  const teams = new Map();
-  for (const e of entries){ if (!teams.has(e.team)) teams.set(e.team, []); teams.get(e.team).push(e); }
+  const teams = new Map(), seen = new Set();
+  for (const e of entries){ if (!teams.has(e.team)) teams.set(e.team, []); }
+  for (const e of entries){
+    const duty = isWork(kind(e.value)) && DUTY_TEAMS.find(d => d.test.test(e.value));
+    const t = duty ? duty.team : e.team;
+    const id = t + '|' + e.name + '|' + e.value;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (!teams.has(t)) teams.set(t, []);
+    teams.get(t).push(e);
+  }
   const notes = teamNotes.get(k) || [];
   let html = '<div class="teams">', total = 0;
   for (const [t, list] of teams){
