@@ -11,7 +11,7 @@
   /* ===== Settings: the Google Sheet this page reads ===== */
   :root{
     --bg:#f5f7f8; --surface:#ffffff; --surface-2:#eef2f3; --border:#dfe5e7;
-    --text:#14202b; --muted:#64737f; --accent:#0f766e; --accent-soft:#d5f0ec;
+    --text:#14202b; --muted:#64737f; --accent:#0f766e; --accent-soft:#d5f0ec; --me:#e8edff; --me-line:#4f63d2;
     --today:#fff6d6; --today-line:#f0b400; --weekend:#f7f9fa;
     --early:#dbeafe; --early-t:#1e40af;
     --late:#ede9fe;  --late-t:#5b21b6;
@@ -26,7 +26,7 @@
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       --bg:#0d1417; --surface:#151f23; --surface-2:#1c282d; --border:#2a383e;
-      --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37;
+      --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37; --me:#1d2445; --me-line:#8b9cff;
       --today:#3a3214; --today-line:#f0b400; --weekend:#121b1f;
       --early:#1e2f4f; --early-t:#93c5fd; --late:#2e2650; --late-t:#c4b5fd;
       --in:#173a26; --in-t:#86efac; --time:#123247; --time-t:#7dd3fc;
@@ -37,7 +37,7 @@
   }
   :root[data-theme="dark"]{
     --bg:#0d1417; --surface:#151f23; --surface-2:#1c282d; --border:#2a383e;
-    --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37;
+    --text:#e6edf0; --muted:#93a3ab; --accent:#2dd4bf; --accent-soft:#123b37; --me:#1d2445; --me-line:#8b9cff;
     --today:#3a3214; --today-line:#f0b400; --weekend:#121b1f;
     --early:#1e2f4f; --early-t:#93c5fd; --late:#2e2650; --late-t:#c4b5fd;
     --in:#173a26; --in-t:#86efac; --time:#123247; --time-t:#7dd3fc;
@@ -119,6 +119,16 @@
   .months button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   .months button.cur:not([aria-pressed="true"]){border-color:var(--accent);color:var(--accent)}
   .table-wrap{overflow:auto;max-height:calc(100vh - 230px);border-radius:14px}
+
+  /* ===== Full-screen rota: just the grid, filling the screen ===== */
+  .fs-bar{display:none}
+  body.fs{overflow:hidden}
+  body.fs .fs-bar{display:flex;align-items:center;gap:8px;position:fixed;inset:0 0 auto;z-index:60;height:52px;
+    padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+    background:var(--surface);border-bottom:1px solid var(--border);box-sizing:content-box}
+  body.fs .fs-bar b{font-size:16px;min-width:110px;text-align:center}
+  body.fs .table-wrap{position:fixed;z-index:59;left:0;right:0;bottom:0;top:calc(53px + env(safe-area-inset-top,0px));
+    max-height:none;border-radius:0;border:0}
   table.rota{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
   .rota th,.rota td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:6px 6px;text-align:center;white-space:nowrap;background:var(--surface)}
   .rota thead th{position:sticky;top:0;z-index:3;background:var(--surface-2);font-weight:600;font-size:12px;min-width:66px}
@@ -131,6 +141,8 @@
   .rota .name small{display:block;font-weight:400;color:var(--muted);font-size:11px}
   .rota tr.team td{background:var(--accent-soft);color:var(--accent);font-weight:700;text-align:left;text-transform:uppercase;font-size:12px;letter-spacing:.06em}
   .rota tr.team td.name{background:var(--accent-soft)}
+  .rota tr.me td{background:var(--me)}
+  .rota tr.me td.name{box-shadow:inset 3px 0 0 var(--me-line)}
   .rota tr.notes td{background:var(--surface);font-size:11px;color:var(--muted);white-space:normal;min-width:66px}
   .rota tr.notes td.name{font-weight:500;font-style:italic}
   .rota .we{background:var(--weekend)}
@@ -138,7 +150,25 @@
   .rota thead th.tcol{color:var(--text)}
   .rota .other-m{opacity:.55}
   .rota tbody tr.staff:hover td{filter:brightness(.97)}
-  .rota tr.hl td{background:var(--accent-soft)}
+  .rota td.shift{cursor:pointer;position:relative}
+  .rota td.shift:hover{outline:2px solid var(--accent);outline-offset:-2px}
+  .rota td.has-note::after{content:"";position:absolute;top:0;right:0;border-style:solid;border-width:0 9px 9px 0;border-color:transparent var(--today-line) transparent transparent}
+
+  /* ===== Shift notes ===== */
+  .clickable{cursor:pointer}
+  .day.clickable:hover,.team-card li.clickable:hover{background:var(--surface-2)}
+  .shift-note{display:block;font-size:12px;margin-top:3px;color:var(--text);white-space:normal}
+  .team-card li span{min-width:0}
+  #noteDlg{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0;width:min(420px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  #noteDlg::backdrop{background:rgba(0,0,0,.4)}
+  .note-form{display:grid;gap:10px;padding:20px}
+  .note-form h3{margin:0;font-size:18px}
+  .note-form textarea{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:10px 12px;font:inherit;resize:vertical;min-height:96px}
+  .note-actions{display:flex;gap:8px;align-items:center}
+  .btn-primary{height:40px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;padding:0 16px;cursor:pointer}
+  .btn-primary:disabled{opacity:.5;cursor:default}
+  .btn-ghost{height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:0 14px;cursor:pointer}
+  #noteDelete{color:var(--sick-t)}
 
   /* ===== Day view ===== */
   .day-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -252,9 +282,34 @@
       <select id="teamFilter" aria-label="Filter by team"><option value="">All teams</option></select>
       <input type="search" id="nameFilter" placeholder="Search name…" aria-label="Search name">
       <button class="icon-btn" id="jumpToday">Jump to today</button>
+      <button class="icon-btn" id="fsOpen" title="Show just the rota, full screen">⛶ Full screen</button>
+    </div>
+    <div class="fs-bar" id="fsBar">
+      <button class="icon-btn" id="fsPrev" aria-label="Previous month">‹</button>
+      <b id="fsMonth"></b>
+      <button class="icon-btn" id="fsNext" aria-label="Next month">›</button>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="fsToday">Today</button>
+      <button class="icon-btn" id="fsClose" aria-label="Close full screen">✕</button>
     </div>
     <div class="card table-wrap" id="tableWrap"></div>
   </section>
+
+  <dialog id="noteDlg">
+    <form method="dialog" class="note-form">
+      <h3 id="noteTitle"></h3>
+      <div class="muted" id="noteShift"></div>
+      <textarea id="noteText" maxlength="300" rows="4" placeholder="Add note"></textarea>
+      <div class="muted" id="noteMeta" style="font-size:12px"></div>
+      <div class="note-actions">
+        <button type="button" class="btn-ghost" id="noteDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="submit" class="btn-ghost" value="cancel">Cancel</button>
+        <button type="button" class="btn-primary" id="noteSave">Save note</button>
+      </div>
+      <p class="lock-msg" id="noteErr" role="alert"></p>
+    </form>
+  </dialog>
 
   <div class="legend" id="legend">
     <span>Key:</span>
@@ -266,6 +321,7 @@
     <span class="chip k-leave">AL · Leave</span>
     <span class="chip k-off">OFF / RDO</span>
     <span class="chip k-sick">Sick</span>
+    <span>· Tap any shift to add a note (saved on this device only). A gold corner means it has one; hover or tap to read it.</span>
   </div>
 </main>
 
@@ -280,9 +336,15 @@ const UPCOMING_DAYS = 42;
 // The sheet doesn't always separate these teams, so these people are always placed here
 const FIXED_TEAMS = {
   'Clean Team': ['Diego','Diana','Saadat','Paula','Adetola','Isaac','Mohamed'],
-  'Lifeguards': ['Shahed','Zaid','Noah','Andrew','Ibriham','Zijian','Dylan','Emily','Alfie','Ryan','Jessica'],
+  'Lifeguards': ['Shahed','Zaid','Noah','Andrew','Ibrahim','Zijian','Dylan','Emily','Alfie','Ryan','Jessica'],
 };
 const TEAM_OF = new Map(Object.entries(FIXED_TEAMS).flatMap(([t, names]) => names.map(n => [n.toLowerCase(), t])));
+// The sheet spells some names differently from month to month; these all mean the same person
+const NAME_ALIASES = {
+  'ibriham': 'Ibrahim',
+  'jess': 'Jessica',
+};
+const canonical = nm => NAME_ALIASES[nm.toLowerCase()] || nm;
 // In "Who's in", a shift mentioning DM or Rec counts towards that team for the day
 const DUTY_TEAMS = [
   {test: /\bDM\b/i, team: 'Management Team'},
@@ -366,7 +428,7 @@ function parseMonth(name, mIdx, rows){
   }
   const teams = []; let team = null;
   for (let r = 2; r < rows.length; r++){
-    const row = rows[r], nm = clean(row[0]), hrs = clean(row[1]);
+    const row = rows[r], nm = canonical(clean(row[0])), hrs = clean(row[1]);
     const cells = cols.map(col => clean(row[col.c]));
     // section headings are rows like "Clean Team" / "Lifeguards" with no contract hours
     if (nm && !hrs && /(team|lifeguards|staff)$/i.test(nm)){
@@ -382,7 +444,10 @@ function parseMonth(name, mIdx, rows){
         home = teams.find(t => t.name.toLowerCase() === fixed.toLowerCase());
         if (!home){ home = {name: fixed, notes: cells.map(() => []), staff: []}; teams.push(home); }
       }
-      home.staff.push({name: nm, hours: hrs, cells});
+      // the same person listed twice in a month becomes one row
+      const dup = home.staff.find(x => x.name === nm);
+      if (dup){ dup.cells = dup.cells.map((v, i) => v || cells[i]); dup.hours = dup.hours !== '0' && dup.hours ? dup.hours : hrs; }
+      else home.staff.push({name: nm, hours: hrs, cells});
     }
   }
   return {name, mIdx, year, cols, teams};
@@ -458,6 +523,46 @@ async function load(){
   }
 }
 
+/* ---------- Shift notes (saved on this device only) ---------- */
+let shiftNotes = new Map();     // "2026-11-03|Millie" -> {text, at}
+const noteKey = (d, name) => `${dkey(d)}|${name}`;
+const noteFor = (d, name) => shiftNotes.get(noteKey(d, name));
+
+function loadNotes(){
+  try { shiftNotes = new Map(Object.entries(JSON.parse(localStorage.getItem('rota.notes') || '{}'))); }
+  catch { shiftNotes = new Map(); }
+}
+function saveNote(key, text){
+  const next = new Map(shiftNotes);
+  if (text) next.set(key, {text, at: new Date().toISOString()});
+  else next.delete(key);
+  localStorage.setItem('rota.notes', JSON.stringify(Object.fromEntries(next)));   // throws if the browser blocks storage
+  shiftNotes = next;
+}
+
+let editing = null;
+function openNote(date, name, value){
+  editing = {key: noteKey(date, name)};
+  const n = shiftNotes.get(editing.key);
+  $('#noteTitle').textContent = name;
+  $('#noteShift').innerHTML = `${esc(date.toLocaleDateString(undefined, {weekday:'long', day:'numeric', month:'long'}))}${value ? ' · ' + chip(value) : ''}`;
+  $('#noteText').value = n ? n.text : '';
+  $('#noteDelete').classList.toggle('hidden', !n);
+  $('#noteMeta').textContent = n && n.at ? 'Saved ' + new Date(n.at).toLocaleString([], {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+  $('#noteErr').textContent = '';
+  $('#noteDlg').showModal();
+  setTimeout(() => $('#noteText').focus(), 30);
+}
+function commitNote(text){
+  try {
+    saveNote(editing.key, text.trim());
+    $('#noteDlg').close();
+    renderAll();
+  } catch {
+    $('#noteErr').textContent = 'This browser won’t let the site save notes (private browsing can block it).';
+  }
+}
+
 /* ---------- Views ---------- */
 let view = 'me';
 let rotaMonth = null;   // index into data.months
@@ -481,7 +586,7 @@ function renderAll(){
 }
 
 /* ----- My shifts ----- */
-function currentMe(){ return store.get('rota.me') || ''; }
+function currentMe(){ return canonical(store.get('rota.me') || ''); }
 
 function renderStaffSelect(){
   const sel = $('#staffSelect'), me = currentMe();
@@ -573,10 +678,12 @@ function renderMe(){
     for (const x of list){
       const work = x.values.some(v => isWork(kind(v)));
       const isT = dkey(x.d) === dkey(t0);
-      html += `<div class="day ${isT ? 'is-today' : ''} ${work ? '' : 'rest'}">
+      const sn = noteFor(x.d, s.name);
+      html += `<div class="day clickable ${isT ? 'is-today' : ''} ${work ? '' : 'rest'}" data-note-date="${dkey(x.d)}" data-note-name="${esc(s.name)}" data-note-value="${esc(x.values[0] || '')}" title="${sn ? 'Note: ' + esc(sn.text) : 'Tap to add a note'}">
         <div class="dn"><span>${DOW[x.d.getDay()]}</span><b>${x.d.getDate()}</b></div>
         <div>${x.values.length ? x.values.map(chip).join(' ') + `<div class="note">${esc(x.values.map(describe).join(' + '))}</div>` : '<span class="muted">Not rostered</span>'}
-          ${x.notes && x.notes.length ? `<div class="note">📌 ${esc(x.notes.join(' · '))}</div>` : ''}</div>
+          ${x.notes && x.notes.length ? `<div class="note">📌 ${esc(x.notes.join(' · '))}</div>` : ''}
+          ${sn ? `<div class="shift-note">📝 ${esc(sn.text)}</div>` : ''}</div>
         <div class="rel">${relLabel(x.d)}</div></div>`;
     }
     html += `</div>`;
@@ -588,6 +695,11 @@ function renderMe(){
 }
 
 /* ----- Who's in ----- */
+function personRow(e, cls){
+  const n = noteFor(dayDate, e.name);
+  return `<li class="clickable ${cls}" data-note-name="${esc(e.name)}" data-note-value="${esc(e.value)}"${n ? ` title="${esc(n.text)}"` : ''}>
+    <span>${esc(e.name)}${n ? `<small class="shift-note">📝 ${esc(n.text)}</small>` : ''}</span>${chip(e.value)}</li>`;
+}
 function renderDay(){
   const k = dkey(dayDate), isT = k === dkey(today0());
   $('#dayTitle').textContent = (isT ? 'Today · ' : '') + dayDate.toLocaleDateString(undefined, {weekday:'long', day:'numeric', month:'long'});
@@ -618,8 +730,8 @@ function renderDay(){
     work.sort((a,b) => order[kind(a.value)] - order[kind(b.value)]);
     html += `<div class="card team-card"><h3>${esc(t)} <span class="muted" style="font-weight:500">· ${work.length} in</span></h3>
       ${tn.map(n => `<div class="tnote">📌 ${esc(n.note)}</div>`).join('')}
-      <ul>${work.map(e => `<li><span>${esc(e.name)}</span>${chip(e.value)}</li>`).join('')}
-      ${away.map(e => `<li class="away"><span>${esc(e.name)}</span>${chip(e.value)}</li>`).join('')}</ul></div>`;
+      <ul>${work.map(e => personRow(e, '')).join('')}
+      ${away.map(e => personRow(e, 'away')).join('')}</ul></div>`;
   }
   html += '</div>';
   $('#dayBody').innerHTML = total || notes.length ? html : `<div class="card empty">Nobody is rostered on this day.</div>`;
@@ -640,6 +752,9 @@ function renderRota(){
   }
   renderMonths();
   const m = data.months[rotaMonth];
+  $('#fsMonth').textContent = `${m.name} ${m.year}`;
+  $('#fsPrev').disabled = rotaMonth === 0;
+  $('#fsNext').disabled = rotaMonth === data.months.length - 1;
   const tf = $('#teamFilter');
   const tOpts = '<option value="">All teams</option>' + m.teams.filter(t => t.staff.length).map(t => `<option>${esc(t.name)}</option>`).join('');
   if (tf.dataset.sig !== tOpts){ const keep = tf.value; tf.innerHTML = tOpts; tf.dataset.sig = tOpts; tf.value = keep; }
@@ -660,8 +775,11 @@ function renderRota(){
       h += `<tr class="notes"><td class="name">Notes</td>` + t.notes.map((n, i) => `<td class="${colCls(m.cols[i])}">${esc(n.join(' · '))}</td>`).join('') + `</tr>`;
     }
     for (const s of staff){
-      h += `<tr class="staff ${s.name === me ? 'hl' : ''}"><td class="name"><button data-staff="${esc(s.name)}" title="See ${esc(s.name)}'s shifts">${esc(s.name)}</button>${s.hours && s.hours !== '0' ? `<small>${esc(s.hours)} hrs</small>` : ''}</td>`;
-      h += s.cells.map((v, i) => `<td class="${colCls(m.cols[i])}">${chip(v)}</td>`).join('') + `</tr>`;
+      h += `<tr class="staff${s.name === me ? ' me' : ''}"><td class="name"><button data-staff="${esc(s.name)}" title="See ${esc(s.name)}'s shifts">${esc(s.name)}</button>${s.hours && s.hours !== '0' ? `<small>${esc(s.hours)} hrs</small>` : ''}</td>`;
+      h += s.cells.map((v, i) => {
+        const n = noteFor(m.cols[i].date, s.name);
+        return `<td class="${colCls(m.cols[i])} shift${n ? ' has-note' : ''}" data-i="${i}" data-staff-cell="${esc(s.name)}"${n ? ` title="${esc(n.text)}"` : ''}>${chip(v)}</td>`;
+      }).join('') + `</tr>`;
     }
   }
   h += `</tbody></table>`;
@@ -690,7 +808,49 @@ $('#months').onclick = e => { const b = e.target.closest('button'); if (!b) retu
 $('#teamFilter').onchange = renderRota;
 $('#nameFilter').oninput = renderRota;
 $('#jumpToday').onclick = scrollToToday;
-$('#tableWrap').onclick = e => { const b = e.target.closest('[data-staff]'); if (!b) return; store.set('rota.me', b.dataset.staff); setView('me'); window.scrollTo(0,0); };
+
+// Full screen: real fullscreen where the browser allows it (not iPhone), otherwise the grid just fills the window
+function openFullscreen(){
+  document.body.classList.add('fs');
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  scrollToToday();
+}
+function closeFullscreen(){
+  document.body.classList.remove('fs');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+$('#fsOpen').onclick = openFullscreen;
+$('#fsClose').onclick = closeFullscreen;
+$('#fsToday').onclick = () => {
+  const t = today0(), i = data.months.findIndex(m => m.mIdx === t.getMonth() && m.year === t.getFullYear());
+  if (i >= 0 && i !== rotaMonth){ rotaMonth = i; renderRota(); }
+  scrollToToday();
+};
+$('#fsPrev').onclick = () => { if (rotaMonth > 0){ rotaMonth--; renderRota(); $('#tableWrap').scrollLeft = 0; } };
+$('#fsNext').onclick = () => { if (rotaMonth < data.months.length - 1){ rotaMonth++; renderRota(); $('#tableWrap').scrollLeft = 0; } };
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs') && !$('#noteDlg').open) closeFullscreen(); });
+$('#tableWrap').onclick = e => {
+  const cell = e.target.closest('[data-staff-cell]');
+  if (cell){
+    const m = data.months[rotaMonth], col = m.cols[+cell.dataset.i], name = cell.dataset.staffCell;
+    const s = m.teams.flatMap(t => t.staff).find(x => x.name === name);
+    return openNote(col.date, name, s ? s.cells[+cell.dataset.i] : '');
+  }
+  const b = e.target.closest('[data-staff]'); if (!b) return; store.set('rota.me', b.dataset.staff); setView('me'); window.scrollTo(0,0);
+};
+$('#meBody').addEventListener('click', e => {
+  const row = e.target.closest('[data-note-date]'); if (!row) return;
+  openNote(fromKey(row.dataset.noteDate), row.dataset.noteName, row.dataset.noteValue);
+});
+$('#dayBody').addEventListener('click', e => {
+  const row = e.target.closest('[data-note-name]'); if (!row) return;
+  openNote(dayDate, row.dataset.noteName, row.dataset.noteValue);
+});
+$('#noteSave').onclick = () => commitNote($('#noteText').value);
+$('#noteDelete').onclick = () => commitNote('');
+$('#noteText').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) commitNote($('#noteText').value); });
 $('#dayPrev').onclick = () => { dayDate = addDays(dayDate, -1); renderDay(); };
 $('#dayNext').onclick = () => { dayDate = addDays(dayDate, 1); renderDay(); };
 $('#dayToday').onclick = () => { dayDate = today0(); renderDay(); };
@@ -707,6 +867,15 @@ const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const unb64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
 
 // The key is remembered on this device (never the passcode). A new passcode means a new salt, so old keys stop working.
+// What the passcode unlocks: the sheet ID (stored as JSON; older versions stored the bare ID)
+function applySecret(s){
+  if (s.startsWith('{')){
+    const o = JSON.parse(s);
+    SHEET_ID = o.sheet;
+  } else {
+    SHEET_ID = s;
+  }
+}
 async function openWithKey(rawKey){
   const key = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
   const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv: b64(LOCK.iv)}, key, b64(LOCK.data));
@@ -728,8 +897,9 @@ function start(){
   document.body.classList.remove('locked');
   if (started) { load(); return; }
   started = true;
+  loadNotes();
   const p = new URLSearchParams(location.search).get('me');
-  if (p) store.set('rota.me', p);
+  if (p) store.set('rota.me', canonical(p));
   const v = store.get('rota.view');
   setView(p ? 'me' : (['me','day','rota'].includes(v) ? v : 'me'));
   load();
@@ -743,7 +913,7 @@ $('#lockForm').addEventListener('submit', async e => {
   btn.disabled = true; btn.textContent = 'Checking…'; $('#lockMsg').textContent = '';
   try {
     const raw = await keyFromPasscode(pass);
-    SHEET_ID = await openWithKey(raw);
+    applySecret(await openWithKey(raw));
     store.set('rota.key', LOCK.salt + ':' + unb64(raw));
     $('#passcode').value = '';
     start();
@@ -766,7 +936,7 @@ $('#lockBtn').onclick = () => {
   if (!LOCK) return showLock('The passcode hasn’t been set up yet.');
   const saved = (store.get('rota.key') || '').split(':');
   if (saved[0] === LOCK.salt && saved[1]){
-    try { SHEET_ID = await openWithKey(b64(saved[1])); return start(); } catch {}
+    try { applySecret(await openWithKey(b64(saved[1]))); return start(); } catch {}
   }
   showLock();
 })();
